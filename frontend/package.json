@@ -1,0 +1,11 @@
+{
+  "name": "rin-php",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "client"
+  ],
+  "scripts": {
+    "build": "npm run build -w client"
+  }
+}
