@@ -120,9 +120,32 @@ final class App
         if (!is_file($index)) {
             return Response::text('Frontend build is missing', 500);
         }
-        return Response::html((string) file_get_contents($index), 200, [
+        return Response::html($this->frontendHtml($index), 200, [
             'Cache-Control' => 'no-cache',
         ]);
+    }
+
+    private function frontendHtml(string $index): string
+    {
+        $html = (string) file_get_contents($index);
+        $version = $this->clientConfigVersion();
+        return str_replace(
+            'src="/api/config/client/bootstrap.js"',
+            'src="/api/config/client/bootstrap.js?v=' . $version . '"',
+            $html
+        );
+    }
+
+    private function clientConfigVersion(): string
+    {
+        $rows = $this->db->fetchAll(
+            "SELECT key, value FROM cache WHERE type = 'client.config' ORDER BY key"
+        );
+        $parts = [];
+        foreach ($rows as $row) {
+            $parts[] = $row['key'] . '=' . $row['value'];
+        }
+        return substr(sha1(implode("\n", $parts)), 0, 12);
     }
 
     private function context(Request $request): Context
