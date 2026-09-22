@@ -65,6 +65,49 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\serve.ps1
 
 网站根目录指向 `public/`。
 
+### 宝塔面板
+
+运行目录选 `/public` 后，如果勾了「防跨站攻击」，`open_basedir` 会只剩 `public/` 和 `/tmp/`。`public/index.php` 就读不到上一级的 `app/`、`config.php` 和 `storage/`。
+
+网站 → 设置 → 网站目录：
+
+- 运行目录保持 `/public`
+- 取消勾选「防跨站攻击(open_basedir)」，或者把 `public/.user.ini` 改成项目根目录：
+
+```ini
+open_basedir=/www/wwwroot/blog/:/tmp/
+```
+
+路径换成实际目录。改完重启 PHP。`.user.ini` 默认缓存约 5 分钟。
+
+### 伪静态
+
+宝塔的伪静态是单独文件，默认是空的，访问 `/login` 这类路径会直接 404。网站 → 设置 → 伪静态，写入：
+
+```nginx
+fastcgi_intercept_errors off;
+
+location / {
+    try_files $uri $uri/ /index.php?$query_string;
+}
+
+location = /avatar.png {
+    try_files $uri /index.php?$query_string;
+}
+
+location = /api/config/client/bootstrap.js {
+    try_files $uri /index.php?$query_string;
+}
+
+location ^~ /api/blob/ {
+    try_files $uri /index.php?$query_string;
+}
+```
+
+宝塔全局打开了 `fastcgi_intercept_errors`。这里不关掉的话，PHP 自己返回的 404 会被换成 nginx 的 `404.html`。`/avatar.png`、`/api/blob/` 和 `bootstrap.js` 也要单独交给 PHP，否则会被当成静态文件。
+
+改完执行 `nginx -t` 并重载 nginx。
+
 ### Apache
 
 `public/.htaccess` 已包含重写规则，需开启 mod_rewrite。
