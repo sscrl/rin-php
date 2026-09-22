@@ -7,13 +7,6 @@ storage/cache/**
 storage/logs/**
 !storage/logs/.gitkeep
 config.php
-public/assets
-public/index.html
-public/locales
-public/favicon.png
-public/robots.txt
-public/*.woff
-public/*.woff2
 frontend/node_modules
 frontend/**/node_modules
 frontend/client/dist

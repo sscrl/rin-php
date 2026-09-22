@@ -21,7 +21,6 @@ use Rin\Support\Database;
 use Rin\Support\Helpers;
 use Rin\Support\Jwt;
 use Rin\Support\StorageService;
-use Rin\Web\Frontend;
 
 final class App
 {
@@ -117,7 +116,13 @@ final class App
             ]);
         }
 
-        return Frontend::handle($this->context($request));
+        $index = $this->root . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . 'index.html';
+        if (!is_file($index)) {
+            return Response::text('Frontend build is missing', 500);
+        }
+        return Response::html((string) file_get_contents($index), 200, [
+            'Cache-Control' => 'no-cache',
+        ]);
     }
 
     private function context(Request $request): Context

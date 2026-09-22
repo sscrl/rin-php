@@ -2,7 +2,7 @@
 
 基于 [openRin/Rin](https://github.com/openRin/Rin) v0.3.0 的 PHP 服务端版本。
 
-页面由 PHP 直接输出，不需要 Node.js，也不需要构建前端。外观和功能按原版 Rin 保留：
+接口和页面都由 PHP 托管。页面使用仓库里已经构建好的原版 Rin 前端，部署时不需要 Node.js，也不用再构建。外观和功能与原版一致：
 
 - 数据库：本地 SQLite（不再使用 Cloudflare D1）
 - 文件：本地目录 `storage/uploads`（不再使用 R2 / S3）
@@ -157,7 +157,7 @@ Linux crontab 示例：
 
 ```text
 app/                 PHP 后端
-public/              Web 根目录（PHP 入口和样式）
+public/              Web 根目录（原版前端和 PHP 入口）
 storage/uploads/     本地上传文件
 storage/database.sqlite  首次运行自动创建
 frontend/            原版 React 源码，运行站点时不需要

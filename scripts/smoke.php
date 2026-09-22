@@ -43,7 +43,7 @@ function check(string $name, int $status, $expect, string $body, ?string $err = 
 }
 [$s, $h, $b, $e] = req('GET', $base . '/');
 check('home', $s, 200, $b, $e);
-if (!str_contains($b, '/site.css') || str_contains($b, 'id="root"') || str_contains($b, '/assets/index-')) { echo "FAIL home is not the PHP page\n"; $fail++; }
+if (!str_contains($b, 'id="root"') || !str_contains($b, '/assets/index-BkfkZ2pF.js')) { echo "FAIL home is not the original frontend\n"; $fail++; }
 [$s, $h, $b, $e] = req('GET', $base . '/api/auth/status');
 check('auth status', $s, 200, $b, $e);
 $st = json_decode($b, true);
