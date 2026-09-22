@@ -94,7 +94,11 @@ final class ConfigController
             'globalThis.__RIN_CLIENT_CONFIG__=' . $serialized . ';',
             'application/javascript; charset=utf-8',
             200,
-            ['Cache-Control' => 'public, max-age=0, must-revalidate']
+            [
+                'Cache-Control' => 'private, no-store, max-age=0',
+                'CDN-Cache-Control' => 'no-store',
+                'Cloudflare-CDN-Cache-Control' => 'no-store',
+            ]
         );
     }
 
