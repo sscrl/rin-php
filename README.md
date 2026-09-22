@@ -2,7 +2,7 @@
 
 基于 [openRin/Rin](https://github.com/openRin/Rin) v0.3.0 的 PHP 服务端版本。
 
-前端外观与功能与原版一致，后端改为普通 PHP 服务器：
+页面由 PHP 直接输出，不需要 Node.js，也不需要构建前端。外观和功能按原版 Rin 保留：
 
 - 数据库：本地 SQLite（不再使用 Cloudflare D1）
 - 文件：本地目录 `storage/uploads`（不再使用 R2 / S3）
@@ -11,7 +11,6 @@
 ## 环境要求
 
 - PHP 8.1+（需启用 pdo_sqlite、sqlite3、curl、gd、mbstring、openssl、fileinfo）
-- Node.js 18+（仅构建前端时需要）
 
 ## 快速开始
 
@@ -28,17 +27,7 @@ Copy-Item config.example.php config.php
 - 用户名：`admin`
 - 密码：`admin123`
 
-3. 构建前端（首次或前端代码变更后）：
-
-```powershell
-cd frontend
-npm install
-npm run build
-```
-
-构建产物会输出到 `public/`，不会清空已有的 `index.php`。
-
-4. 启动：
+3. 启动：
 
 ```powershell
 # 若已把 PHP 加入 PATH
@@ -91,7 +80,7 @@ server {
     listen 80;
     server_name example.com;
     root /path/to/blog/public;
-    index index.php index.html;
+    index index.php;
 
     location / {
         try_files $uri $uri/ /index.php?$query_string;
@@ -125,10 +114,10 @@ Linux crontab 示例：
 
 ```text
 app/                 PHP 后端
-public/              Web 根目录（前端构建产物 + index.php）
+public/              Web 根目录（PHP 入口和样式）
 storage/uploads/     本地上传文件
 storage/database.sqlite  首次运行自动创建
-frontend/            原版 React 前端
+frontend/            原版 React 源码，运行站点时不需要
 scripts/cron.php     友链健康检查
 config.example.php   配置模板
 ```

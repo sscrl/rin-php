@@ -42,8 +42,8 @@ function check(string $name, int $status, $expect, string $body, ?string $err = 
     }
 }
 [$s, $h, $b, $e] = req('GET', $base . '/');
-check('SPA /', $s, 200, $b, $e);
-if (!str_contains($b, 'id="root"')) { echo "FAIL SPA missing root\n"; $fail++; }
+check('home', $s, 200, $b, $e);
+if (!str_contains($b, '/site.css') || str_contains($b, 'id="root"') || str_contains($b, '/assets/index-')) { echo "FAIL home is not the PHP page\n"; $fail++; }
 [$s, $h, $b, $e] = req('GET', $base . '/api/auth/status');
 check('auth status', $s, 200, $b, $e);
 $st = json_decode($b, true);
@@ -123,7 +123,7 @@ check('rss json', $s, 200, $b, $e);
 [$s, $h, $b, $e] = req('GET', $base . '/api/config/health', null, ['Authorization: Bearer ' . $token], $cookie);
 check('health', $s, 200, $b, $e);
 [$s, $h, $b, $e] = req('GET', $base . '/feed/smoke');
-check('SPA feed', $s, 200, $b, $e);
+check('article page', $s, 200, $b, $e);
 [$s, $h, $b, $e] = req('GET', $base . '/api/user/github');
 check('github disabled', $s, 400, $b, $e);
 echo $fail === 0 ? "ALL PASSED\n" : "FAILED $fail\n";

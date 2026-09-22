@@ -21,6 +21,7 @@ use Rin\Support\Database;
 use Rin\Support\Helpers;
 use Rin\Support\Jwt;
 use Rin\Support\StorageService;
+use Rin\Web\Frontend;
 
 final class App
 {
@@ -116,11 +117,7 @@ final class App
             ]);
         }
 
-        $index = $this->root . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . 'index.html';
-        if (is_file($index)) {
-            return Response::html((string) file_get_contents($index));
-        }
-        return Response::text('Hi');
+        return Frontend::handle($this->context($request));
     }
 
     private function context(Request $request): Context

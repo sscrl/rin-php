@@ -52,6 +52,16 @@ final class Response
         return $this->status;
     }
 
+    public function body(): mixed
+    {
+        return $this->body;
+    }
+
+    public function headers(): array
+    {
+        return $this->headers;
+    }
+
     public function withHeader(string $name, string $value): self
     {
         $clone = clone $this;

@@ -119,4 +119,43 @@ final class Request
         $cookie = $this->cookies['token'] ?? null;
         return is_string($cookie) && $cookie !== '' ? $cookie : null;
     }
+
+    public function withQuery(array $query): self
+    {
+        return new self(
+            method: $this->method,
+            path: $this->path,
+            query: $query,
+            headers: $this->headers,
+            cookies: $this->cookies,
+            rawBody: $this->rawBody,
+            post: $this->post,
+            files: $this->files,
+            origin: $this->origin,
+            scheme: $this->scheme,
+            host: $this->host,
+            ip: $this->ip,
+        );
+    }
+
+    public function withJsonBody(array $data, ?string $method = null): self
+    {
+        $headers = $this->headers;
+        $headers['content-type'] = 'application/json';
+        $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        return new self(
+            method: $method ?? $this->method,
+            path: $this->path,
+            query: $this->query,
+            headers: $headers,
+            cookies: $this->cookies,
+            rawBody: $json === false ? '{}' : $json,
+            post: $this->post,
+            files: $this->files,
+            origin: $this->origin,
+            scheme: $this->scheme,
+            host: $this->host,
+            ip: $this->ip,
+        );
+    }
 }

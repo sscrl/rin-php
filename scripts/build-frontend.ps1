@@ -1,8 +1,1 @@
-$ErrorActionPreference = "Stop"
-Set-Location D:\blog\frontend
-npm install
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-npm run build
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-Write-Host "frontend build done"
-Get-ChildItem D:\blog\public | Select-Object Name, Length
+Write-Host "Rin 现在是纯 PHP 站点，不需要 Node.js，也不需要构建前端。"
