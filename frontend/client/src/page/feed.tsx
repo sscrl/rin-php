@@ -97,19 +97,21 @@ export function FeedPage({ id, TOC, clean }: { id: string, TOC: () => JSX.Elemen
         if (error) {
           setError(error.value as string);
         } else if (data && typeof data !== "string") {
-          setTimeout(() => {
-            setFeed(data as any);
-            setTop(data.top || 0);
-            const headImageUrl = extractFirstMarkdownImageUrl(data.content);
-            if (headImageUrl) {
-              setHeadImage(headImageUrl);
-            }
-            clean(id);
-          }, 0);
+          setFeed(data as any);
+          setTop(data.top || 0);
+          const headImageUrl = extractFirstMarkdownImageUrl(data.content);
+          if (headImageUrl) {
+            setHeadImage(headImageUrl);
+          }
         }
       });
     ref.current = id;
   }, [id]);
+  useEffect(() => {
+    if (!feed) return;
+    const timer = window.setTimeout(() => clean(id), 0);
+    return () => window.clearTimeout(timer);
+  }, [feed, id]);
   useEffect(() => {
     mermaid.initialize({
       startOnLoad: false,
@@ -306,10 +308,8 @@ export function FeedPage({ id, TOC, clean }: { id: string, TOC: () => JSX.Elemen
               {feed && <Comments id={`${feed.id}`} />}
               <div className="h-16" />
             </main>
-            <div className="w-80 hidden lg:block relative">
-              <div
-                className={`start-0 end-0 top-[5.5rem] sticky`}
-              >
+            <div className="w-80 shrink-0 hidden lg:block relative">
+              <div className="start-0 end-0 top-[5.5rem] sticky">
                 <TOC />
               </div>
             </div>
@@ -559,7 +559,7 @@ function CommentItem({
             {timeago(comment.createdAt)}
           </span>
         </div>
-        <p className="t-primary break-words">{comment.content}</p>
+        <p className="t-primary whitespace-pre-wrap break-words">{comment.content}</p>
         <div className="flex flex-row justify-end">
           {(profile?.permission || profile?.id == comment.user.id) && (
             <Popup

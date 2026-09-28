@@ -9,6 +9,7 @@ import {
 import rehypeKatex from "rehype-katex";
 import rehypeRaw from "rehype-raw";
 import gfm from "remark-gfm";
+import remarkBreaks from "remark-breaks";
 import remarkMermaid from "../remark/remarkMermaid";
 import { remarkAlert } from "remark-github-blockquote-alert";
 import remarkMath from "remark-math";
@@ -126,7 +127,7 @@ export function Markdown({ content }: { content: string }) {
   const Content = useMemo(() => (
     <ReactMarkdown
       className="toc-content dark:text-neutral-300"
-      remarkPlugins={[gfm, remarkMermaid, remarkMath, remarkAlert]}
+      remarkPlugins={[gfm, remarkBreaks, remarkMermaid, remarkMath, remarkAlert]}
       children={content}
       rehypePlugins={[rehypeKatex, rehypeRaw]}
       components={{
@@ -366,9 +367,9 @@ export function Markdown({ content }: { content: string }) {
             </h6>
           );
         },
-        p({ children, node, ...props }) {
+        p({ children, node, className, ...props }) {
           return (
-            <p className="mt-2 py-1" {...props}>
+            <p className={`mt-2 py-1 break-words ${className || ""}`.trim()} {...props}>
               {children}
             </p>
           );
@@ -446,7 +447,9 @@ export function Markdown({ content }: { content: string }) {
 
   return (
     <>
-      {Content}
+      <div className="toc-content dark:text-neutral-300">
+        {Content}
+      </div>
       <Lightbox
         plugins={[Download, Zoom, Counter]}
         index={index}

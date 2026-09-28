@@ -150,6 +150,12 @@ ul {
   @apply bg-slate-200 dark:bg-slate-700;
 }
 
+/* Article line wrapping */
+.toc-content {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 /* TOC Style */
 
 .toc {
