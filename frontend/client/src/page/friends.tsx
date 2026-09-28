@@ -29,13 +29,14 @@ type FriendItem = {
     sort_order?: number;
 };
 
-async function publish({ name, avatar, desc, url, showAlert }: { name: string, avatar: string, desc: string, url: string, showAlert: ShowAlertType }) {
+async function publish({ name, avatar, desc, url, website, showAlert }: { name: string, avatar: string, desc: string, url: string, website?: string, showAlert: ShowAlertType }) {
     const t = i18next.t
     const { error } = await client.friend.create({
         avatar,
         name,
         desc,
-        url
+        url,
+        website
     })
     if (error) {
         showAlert(error.value as string)
@@ -50,11 +51,12 @@ export function FriendsPage() {
     const { t } = useTranslation()
     const siteConfig = useSiteConfig();
     const config = useContext(ClientConfigContext)
-    let [apply] = useState<FriendItem>()
+    const [apply, setApply] = useState<FriendItem>()
     const [name, setName] = useState("")
     const [desc, setDesc] = useState("")
     const [avatar, setAvatar] = useState("")
     const [url, setUrl] = useState("")
+    const [website, setWebsite] = useState("")
     const profile = useContext(ProfileContext);
     const [friendsAvailable, setFriendsAvailable] = useState<FriendItem[]>([])
     const [waitList, setWaitList] = useState<FriendItem[]>([])
@@ -67,6 +69,9 @@ export function FriendsPage() {
         if (ref.current) return
         client.friend.list().then(({ data }) => {
             if (data) {
+                if (data.apply_list) {
+                    setApply(data.apply_list as any)
+                }
                 const friend_list = data.friend_list || []
                 const friends_available = friend_list.filter(({ health, accepted }: any) => health.length === 0 && accepted === 1) || []
                 setFriendsAvailable(friends_available as any)
@@ -82,7 +87,7 @@ export function FriendsPage() {
         ref.current = true
     }, [])
     function publishButton() {
-        publish({ name, desc, avatar, url, showAlert })
+        publish({ name, desc, avatar, url, website, showAlert })
     }
     return (<>
         <Helmet>
@@ -100,13 +105,28 @@ export function FriendsPage() {
                 <FriendList title={t('friends.review.waiting')} show={waitList.length > 0} friends={waitList} />
                 <FriendList title={t('friends.review.rejected')} show={refusedList.length > 0} friends={refusedList} />
                 <FriendList title={t('friends.my_apply')} show={profile?.permission !== true && apply !== undefined} friends={apply ? [apply] : []} />
-                {profile && (profile.permission || config.get("friend_apply_enable")) &&
+                {(profile?.permission || config.getBoolean("friend_apply_enable")) &&
                     <div className="wauto t-primary flex text-start text-2xl font-bold mt-8">
-                        <FlatPanel className="md:basis-1/2 p-6">
+                        <FlatPanel className="relative md:basis-1/2 p-6">
                             <p>
-                                {profile.permission ? t('friends.create') : t('friends.apply')}
+                                {profile?.permission ? t('friends.create') : t('friends.apply')}
                             </p>
+                            {!profile?.permission &&
+                                <p className="text-sm mt-2 font-normal text-neutral-500">
+                                    {t('friends.apply_hint')}
+                                </p>
+                            }
                             <div className="text-sm mt-4 text-neutral-500 font-normal">
+                                <input
+                                    type="text"
+                                    name="website"
+                                    value={website}
+                                    onChange={(e) => setWebsite(e.target.value)}
+                                    tabIndex={-1}
+                                    autoComplete="off"
+                                    aria-hidden="true"
+                                    className="absolute -left-[9999px] h-0 w-0 opacity-0"
+                                />
                                 <Input value={name} setValue={setName} placeholder={t('sitename')} variant="flat" />
                                 <Input value={desc} setValue={setDesc} placeholder={t('description')} variant="flat" className="mt-2" />
                                 <Input value={avatar} setValue={setAvatar} placeholder={t('avatar.url')} variant="flat" className="mt-2" />

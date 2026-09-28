@@ -209,6 +209,7 @@ export interface CreateFriendRequest {
   desc: string;
   avatar: string;
   url: string;
+  website?: string;
 }
 
 export interface UpdateFriendRequest {

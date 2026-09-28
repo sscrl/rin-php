@@ -154,7 +154,8 @@
       "rejected": "Rejected",
       "waiting": "Pending review"
     },
-    "title": "Friends"
+    "title": "Friends",
+    "apply_hint": "No login required. The site owner will review your application."
   },
   "github_login": "Github Login",
   "hashtags": "Hashtags",

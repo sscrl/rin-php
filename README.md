@@ -10,24 +10,30 @@
 
 ## 环境要求
 
-- PHP 8.1+（需启用 pdo_sqlite、sqlite3、curl、gd、mbstring、openssl、fileinfo）
+- PHP 8.1+（需启用 pdo_sqlite、sqlite3、curl、gd、mbstring、openssl、fileinfo；若使用 MySQL 还需 pdo_mysql）
 
 ## 快速开始
 
-1. 复制配置：
+上传源码并把网站运行目录设为 `public/` 后，首次访问首页会看到「站点尚未安装」。点击进入三步安装向导：
+
+1. 绑定数据库（默认 SQLite，也可填 MySQL）
+2. 设置站点名称、简介和头像
+3. 设置管理员用户名和密码
+
+安装完成后会生成 `config.php` 和 `storage/installed.lock`，不要把它们提交进 Git。
+
+也可以手动复制配置后启动：
 
 ```powershell
 Copy-Item config.example.php config.php
 ```
 
-2. 修改 `config.php`：把 `jwt_secret` 和默认管理员密码改掉。
-
-默认管理员：
+把 `config.php` 里的 `jwt_secret` 和默认管理员密码改掉。默认管理员：
 
 - 用户名：`admin`
 - 密码：`admin123`
 
-3. 启动：
+启动：
 
 ```powershell
 # 若已把 PHP 加入 PATH
@@ -159,7 +165,7 @@ Linux crontab 示例：
 app/                 PHP 后端
 public/              Web 根目录（原版前端和 PHP 入口）
 storage/uploads/     本地上传文件
-storage/database.sqlite  首次运行自动创建
+storage/database.sqlite  安装向导或首次启动时创建
 frontend/            原版 React 源码，运行站点时不需要
 scripts/cron.php     友链健康检查
 config.example.php   配置模板

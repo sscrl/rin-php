@@ -19,7 +19,10 @@ final class FriendController
         } else {
             $rows = $ctx->db->fetchAll('SELECT * FROM friends WHERE accepted = 1 ORDER BY sort_order DESC, created_at ASC');
         }
-        $apply = $ctx->uid ? $ctx->db->fetch('SELECT * FROM friends WHERE uid = :uid', ['uid' => $ctx->uid]) : null;
+        $apply = null;
+        if ($ctx->uid && !$ctx->admin && !self::isGuestUid($ctx, $ctx->uid)) {
+            $apply = $ctx->db->fetch('SELECT * FROM friends WHERE uid = :uid', ['uid' => $ctx->uid]);
+        }
         return Response::json([
             'friend_list' => array_map([self::class, 'map'], $rows),
             'apply_list' => $apply ? self::map($apply) : null,
@@ -28,31 +31,50 @@ final class FriendController
 
     public static function create(Context $ctx): Response
     {
-        $uid = $ctx->requireUser();
         $enable = Helpers::bool($ctx->clientConfig->getOrDefault('friend_apply_enable', true));
+        $body = $ctx->request->json();
+        if (trim((string) ($body['website'] ?? $body['company'] ?? '')) !== '') {
+            return Response::text('OK');
+        }
         if (!$enable && !$ctx->admin) {
             throw HttpException::text('Friend Link Apply Disabled', 403);
         }
-        $body = $ctx->request->json();
-        $name = (string) ($body['name'] ?? '');
-        $desc = (string) ($body['desc'] ?? '');
-        $avatar = (string) ($body['avatar'] ?? '');
-        $url = (string) ($body['url'] ?? '');
+
+        $name = trim((string) ($body['name'] ?? ''));
+        $desc = trim((string) ($body['desc'] ?? ''));
+        $avatar = trim((string) ($body['avatar'] ?? ''));
+        $url = trim((string) ($body['url'] ?? ''));
         if (mb_strlen($name) > 20 || mb_strlen($desc) > 100 || mb_strlen($avatar) > 100 || mb_strlen($url) > 100) {
             throw HttpException::text('Invalid input', 400);
         }
         if ($name === '' || $desc === '' || $avatar === '' || $url === '') {
             throw HttpException::text('Invalid input', 400);
         }
+        $url = self::normalizeUrl($url);
+
+        $uid = $ctx->uid;
+        $username = (string) ($ctx->username ?: '访客');
         if (!$ctx->admin) {
-            $exist = $ctx->db->fetch('SELECT id FROM friends WHERE uid = :uid', ['uid' => $uid]);
-            if ($exist) {
-                throw HttpException::text('Already sent', 400);
+            if ($uid === null) {
+                self::rateLimit($ctx);
+                $uid = self::ensureGuestUser($ctx);
+                $username = '访客';
+            } else {
+                $exist = $ctx->db->fetch('SELECT id FROM friends WHERE uid = :uid', ['uid' => $uid]);
+                if ($exist) {
+                    throw HttpException::text('Already sent', 400);
+                }
             }
+        } else {
+            $uid = $ctx->requireUser();
         }
+
+        self::assertUniqueUrl($ctx, $url);
+        $auto = Helpers::bool($ctx->serverConfig->getOrDefault('friend_apply_auto_accept', false));
         $now = Dates::now();
+        $descCol = $ctx->db->ident('desc');
         $ctx->db->execute(
-            'INSERT INTO friends (name, "desc", avatar, url, uid, accepted, health, sort_order, created_at, updated_at)
+            'INSERT INTO friends (name, ' . $descCol . ', avatar, url, uid, accepted, health, sort_order, created_at, updated_at)
              VALUES (:name, :desc, :avatar, :url, :uid, :accepted, \'\', 0, :c, :u)',
             [
                 'name' => $name,
@@ -60,7 +82,7 @@ final class FriendController
                 'avatar' => $avatar,
                 'url' => $url,
                 'uid' => $uid,
-                'accepted' => $ctx->admin ? 1 : 0,
+                'accepted' => ($ctx->admin || $auto) ? 1 : 0,
                 'c' => $now,
                 'u' => $now,
             ]
@@ -70,10 +92,10 @@ final class FriendController
             $frontendUrl = $ctx->request->baseUrl();
             Webhook::notify($hook['webhookUrl'] ?? '', [
                 'event' => 'friend.created',
-                'message' => "{$frontendUrl}/friends\n{$ctx->username} 申请友链: {$name}\n{$desc}\n{$url}",
+                'message' => "{$frontendUrl}/friends\n{$username} 申请友链: {$name}\n{$desc}\n{$url}",
                 'title' => $name,
                 'url' => $frontendUrl . '/friends',
-                'username' => (string) $ctx->username,
+                'username' => $username,
                 'content' => $url,
                 'description' => $desc,
             ], [
@@ -102,10 +124,14 @@ final class FriendController
         $desc = self::wrap($body['desc'] ?? null) ?? $exist['desc'];
         $avatar = self::wrap($body['avatar'] ?? null) ?? $exist['avatar'];
         $url = self::wrap($body['url'] ?? null) ?? $exist['url'];
+        if (self::wrap($body['url'] ?? null) !== null) {
+            $url = self::normalizeUrl((string) $url);
+        }
         $accepted = $ctx->admin ? ($body['accepted'] ?? $exist['accepted']) : 0;
         $sort = $ctx->admin ? ($body['sort_order'] ?? $exist['sort_order']) : $exist['sort_order'];
+        $descCol = $ctx->db->ident('desc');
         $ctx->db->execute(
-            'UPDATE friends SET name = :name, "desc" = :desc, avatar = :avatar, url = :url, accepted = :accepted, sort_order = :sort, updated_at = :u WHERE id = :id',
+            'UPDATE friends SET name = :name, ' . $descCol . ' = :desc, avatar = :avatar, url = :url, accepted = :accepted, sort_order = :sort, updated_at = :u WHERE id = :id',
             [
                 'name' => $name,
                 'desc' => $desc,
@@ -213,5 +239,93 @@ final class FriendController
         }
         return $s;
     }
-}
 
+    private static function normalizeUrl(string $url): string
+    {
+        $url = trim($url);
+        if (!preg_match('#^https?://#i', $url)) {
+            $url = 'https://' . ltrim($url, '/');
+        }
+        $parts = parse_url($url);
+        if (!is_array($parts) || empty($parts['host'])) {
+            throw HttpException::text('Invalid url', 400);
+        }
+        $scheme = strtolower((string) ($parts['scheme'] ?? 'https'));
+        if ($scheme !== 'http' && $scheme !== 'https') {
+            throw HttpException::text('Invalid url', 400);
+        }
+        $host = strtolower((string) $parts['host']);
+        $port = isset($parts['port']) ? ':' . $parts['port'] : '';
+        $path = $parts['path'] ?? '';
+        $path = $path === '/' ? '' : rtrim($path, '/');
+        $query = isset($parts['query']) ? '?' . $parts['query'] : '';
+        return $scheme . '://' . $host . $port . $path . $query;
+    }
+
+    private static function assertUniqueUrl(Context $ctx, string $url): void
+    {
+        $rows = $ctx->db->fetchAll('SELECT url FROM friends');
+        foreach ($rows as $row) {
+            try {
+                if (self::normalizeUrl((string) $row['url']) === $url) {
+                    throw HttpException::text('Already sent', 400);
+                }
+            } catch (HttpException $e) {
+                if ($e->getMessage() === 'Already sent') {
+                    throw $e;
+                }
+            }
+        }
+    }
+
+    private static function rateLimit(Context $ctx): void
+    {
+        $ip = $ctx->request->ip !== '' ? $ctx->request->ip : 'UNK';
+        $key = 'friend_apply:' . sha1($ip);
+        $now = time();
+        $raw = $ctx->cache->get($key);
+        $hits = [];
+        if (is_array($raw)) {
+            $hits = $raw;
+        } elseif (is_string($raw) && $raw !== '') {
+            $decoded = json_decode($raw, true);
+            $hits = is_array($decoded) ? $decoded : [];
+        }
+        $hits = array_values(array_filter(
+            $hits,
+            static fn ($t) => is_numeric($t) && (int) $t > $now - 86400
+        ));
+        if (count($hits) >= 5) {
+            throw HttpException::text('Too many requests', 429);
+        }
+        $hits[] = $now;
+        $ctx->cache->set($key, $hits);
+    }
+
+    private static function ensureGuestUser(Context $ctx): int
+    {
+        $user = $ctx->db->fetch('SELECT id FROM users WHERE openid = :openid', ['openid' => 'guest']);
+        if ($user) {
+            return (int) $user['id'];
+        }
+        $now = Dates::now();
+        return $ctx->db->insert(
+            'INSERT INTO users (username, openid, avatar, password, permission, created_at, updated_at)
+             VALUES (:username, :openid, :avatar, :password, 0, :c, :u)',
+            [
+                'username' => 'guest',
+                'openid' => 'guest',
+                'avatar' => '',
+                'password' => '',
+                'c' => $now,
+                'u' => $now,
+            ]
+        );
+    }
+
+    private static function isGuestUid(Context $ctx, int $uid): bool
+    {
+        $user = $ctx->db->fetch('SELECT openid FROM users WHERE id = :id', ['id' => $uid]);
+        return $user !== null && $user['openid'] === 'guest';
+    }
+}

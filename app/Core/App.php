@@ -9,6 +9,7 @@ use Rin\Controllers\ConfigController;
 use Rin\Controllers\FaviconController;
 use Rin\Controllers\FeedController;
 use Rin\Controllers\FriendController;
+use Rin\Controllers\InstallController;
 use Rin\Controllers\MomentController;
 use Rin\Controllers\RssController;
 use Rin\Controllers\SearchController;
@@ -19,29 +20,27 @@ use Rin\Controllers\WordpressController;
 use Rin\Support\ConfigStore;
 use Rin\Support\Database;
 use Rin\Support\Helpers;
+use Rin\Support\Installer;
 use Rin\Support\Jwt;
 use Rin\Support\StorageService;
+use Rin\Web\InstallPages;
 
 final class App
 {
     private Router $router;
-    private array $env;
-    private Database $db;
-    private StorageService $storage;
+    private array $env = [];
+    private ?Database $db = null;
+    private ?StorageService $storage = null;
+    private bool $installed;
 
     public function __construct(private string $root)
     {
-        $this->env = $this->loadEnv();
-        $this->db = Database::connect(
-            $this->root . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'database.sqlite',
-            $this->root . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'schema.sql'
-        );
-        $this->storage = new StorageService(
-            $this->root . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'uploads',
-            (string) ($this->env['upload_folder'] ?? 'images/')
-        );
-        $GLOBALS['rin_storage'] = $this->storage;
+        $this->installed = Installer::isInstalled($root);
         $this->router = new Router();
+        if (!$this->installed) {
+            return;
+        }
+        $this->bootInstalled();
         $this->registerRoutes();
     }
 
@@ -64,7 +63,9 @@ final class App
         }
 
         try {
-            $response = $this->dispatch($request);
+            $response = $this->installed
+                ? $this->dispatch($request)
+                : $this->dispatchUninstalled($request);
         } catch (HttpException $e) {
             $response = $e->asText()
                 ? Response::text($e->getMessage(), $e->status())
@@ -87,13 +88,62 @@ final class App
 
     public function cron(): void
     {
+        if (!$this->installed || $this->db === null) {
+            return;
+        }
         $ctx = $this->context(Request::fromGlobals());
-        \Rin\Controllers\FriendController::checkHealth($ctx);
+        FriendController::checkHealth($ctx);
+    }
+
+    private function bootInstalled(): void
+    {
+        $this->env = $this->loadEnv();
+        $this->db = Database::fromEnv(
+            $this->env,
+            $this->root,
+            Installer::schemaPath($this->root)
+        );
+        $this->storage = new StorageService(
+            $this->root . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'uploads',
+            (string) ($this->env['upload_folder'] ?? 'images/')
+        );
+        $GLOBALS['rin_storage'] = $this->storage;
+    }
+
+    private function dispatchUninstalled(Request $request): Response
+    {
+        $path = $request->path;
+        $method = $request->method;
+        if ($method === 'GET' && $path === '/install') {
+            return InstallPages::wizard();
+        }
+        if ($method === 'GET' && $path === '/api/install/status') {
+            return InstallController::status($this->root);
+        }
+        if ($method === 'POST' && $path === '/api/install/test-db') {
+            return InstallController::testDb($request, $this->root);
+        }
+        if ($method === 'POST' && $path === '/api/install') {
+            return InstallController::install($request, $this->root);
+        }
+        if ($this->isApiPath($path)) {
+            return Response::json([
+                'success' => false,
+                'error' => [
+                    'code' => 'NOT_INSTALLED',
+                    'message' => 'Site is not installed',
+                ],
+            ], 503);
+        }
+        return InstallPages::home();
     }
 
     private function dispatch(Request $request): Response
     {
         $path = $request->path;
+        if ($path === '/install') {
+            return Response::redirect('/');
+        }
         if (str_starts_with($path, '/api/blob/')) {
             $ctx = $this->context($request);
             return StorageController::blob($ctx, ['key' => rawurldecode(substr($path, strlen('/api/blob/')))]);
@@ -145,7 +195,7 @@ final class App
 
     private function clientConfigVersion(): string
     {
-        $rows = $this->db->fetchAll(
+        $rows = $this->db()->fetchAll(
             "SELECT key, value FROM cache WHERE type = 'client.config' ORDER BY key"
         );
         $parts = [];
@@ -157,15 +207,16 @@ final class App
 
     private function context(Request $request): Context
     {
-        $client = new ConfigStore($this->db, 'client.config', Helpers::CLIENT_DEFAULTS);
-        $server = new ConfigStore($this->db, 'server.config', Helpers::SERVER_DEFAULTS);
-        $cache = new ConfigStore($this->db, 'cache');
-        $ctx = new Context($request, $this->db, $this->env, $client, $server, $cache);
+        $db = $this->db();
+        $client = new ConfigStore($db, 'client.config', Helpers::CLIENT_DEFAULTS);
+        $server = new ConfigStore($db, 'server.config', Helpers::SERVER_DEFAULTS);
+        $cache = new ConfigStore($db, 'cache');
+        $ctx = new Context($request, $db, $this->env, $client, $server, $cache);
         $token = $request->bearerToken();
         if ($token) {
             $payload = (new Jwt((string) $this->env['jwt_secret']))->verify($token);
             if ($payload && isset($payload['id'])) {
-                $user = $this->db->fetch('SELECT * FROM users WHERE id = :id', ['id' => $payload['id']]);
+                $user = $db->fetch('SELECT * FROM users WHERE id = :id', ['id' => $payload['id']]);
                 if ($user) {
                     $ctx->uid = (int) $user['id'];
                     $ctx->username = $user['username'];
@@ -174,6 +225,14 @@ final class App
             }
         }
         return $ctx;
+    }
+
+    private function db(): Database
+    {
+        if ($this->db === null) {
+            throw new \RuntimeException('Database is not initialized');
+        }
+        return $this->db;
     }
 
     private function registerRoutes(): void
@@ -268,12 +327,10 @@ final class App
     private function loadEnv(): array
     {
         $file = $this->root . DIRECTORY_SEPARATOR . 'config.php';
-        $example = $this->root . DIRECTORY_SEPARATOR . 'config.example.php';
         if (!is_file($file)) {
-            copy($example, $file);
+            throw new \RuntimeException('config.php is missing');
         }
         $env = require $file;
         return is_array($env) ? $env : [];
     }
 }
-

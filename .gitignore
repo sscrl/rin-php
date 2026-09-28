@@ -19,3 +19,4 @@ frontend/.vite
 
 Rin-0.3.0/
 *.zip
+storage/installed.lock

@@ -154,7 +154,8 @@
       "rejected": "拒絕",
       "waiting": "待審核"
     },
-    "title": "朋友們"
+    "title": "朋友們",
+    "apply_hint": "無需登入，提交後由站長審核。"
   },
   "github_login": "Github 登入",
   "hashtags": "標籤",

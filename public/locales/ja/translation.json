@@ -154,7 +154,8 @@
       "rejected": "拒否されました",
       "waiting": "審査待ち"
     },
-    "title": "友人"
+    "title": "友人",
+    "apply_hint": "ログイン不要。サイト管理者の審査後に公開されます。"
   },
   "github_login": "Github ログイン",
   "hashtags": "ラベル",
