@@ -127,7 +127,10 @@ final class FriendController
         if (self::wrap($body['url'] ?? null) !== null) {
             $url = self::normalizeUrl((string) $url);
         }
-        $accepted = $ctx->admin ? ($body['accepted'] ?? $exist['accepted']) : 0;
+        $accepted = $ctx->admin ? (int) ($body['accepted'] ?? $exist['accepted']) : 0;
+        if (!in_array($accepted, [-1, 0, 1], true)) {
+            $accepted = (int) $exist['accepted'];
+        }
         $sort = $ctx->admin ? ($body['sort_order'] ?? $exist['sort_order']) : $exist['sort_order'];
         $descCol = $ctx->db->ident('desc');
         $ctx->db->execute(
@@ -188,6 +191,9 @@ final class FriendController
         $ua = (string) ($ctx->serverConfig->get('friend_ua') ?: 'Rin-Check/0.1.0');
         $friends = $ctx->db->fetchAll('SELECT * FROM friends');
         foreach ($friends as $friend) {
+            if ((int) $friend['accepted'] !== 1) {
+                continue;
+            }
             $health = '';
             $ch = curl_init($friend['url']);
             if ($ch === false) {

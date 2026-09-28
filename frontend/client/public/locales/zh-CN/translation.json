@@ -150,8 +150,8 @@
     "left": "暂时离开",
     "my_apply": "我的申请",
     "review": {
-      "accepted": "接受",
-      "rejected": "拒绝",
+      "accepted": "通过",
+      "rejected": "屏蔽",
       "waiting": "待审核"
     },
     "title": "朋友们",
@@ -336,7 +336,17 @@
           "title": "友链健康监测 User-Agent"
         }
       },
-      "title": "友链设置"
+      "title": "友链设置",
+      "pending": {
+        "title": "待审核",
+        "desc": "通过后会在前台友链页显示。",
+        "empty": "暂无待审核申请"
+      },
+      "blocked": {
+        "title": "已屏蔽",
+        "desc": "已屏蔽的友链仅在后台可见，前台不会显示。",
+        "empty": "暂无已屏蔽友链"
+      }
     },
     "ai_summary": {
       "title": "AI 总结设置",

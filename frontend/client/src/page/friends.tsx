@@ -60,7 +60,6 @@ export function FriendsPage() {
     const profile = useContext(ProfileContext);
     const [friendsAvailable, setFriendsAvailable] = useState<FriendItem[]>([])
     const [waitList, setWaitList] = useState<FriendItem[]>([])
-    const [refusedList, setRefusedList] = useState<FriendItem[]>([])
     const [friendsUnavailable, setFriendsUnavailable] = useState<FriendItem[]>([])
     const [status, setStatus] = useState<'idle' | 'loading'>('loading')
     const ref = useRef(false)
@@ -79,8 +78,6 @@ export function FriendsPage() {
                 setFriendsUnavailable(friends_unavailable as any)
                 const waitList = friend_list.filter(({ accepted }: any) => accepted === 0) || []
                 setWaitList(waitList as any)
-                const refuesdList = friend_list.filter(({ accepted }: any) => accepted === -1) || []
-                setRefusedList(refuesdList as any)
             }
             setStatus('idle')
         })
@@ -103,7 +100,6 @@ export function FriendsPage() {
                 <FriendList title={t('friends.title')} show={friendsAvailable.length > 0} friends={friendsAvailable} />
                 <FriendList title={t('friends.left')} show={friendsUnavailable.length > 0} friends={friendsUnavailable} />
                 <FriendList title={t('friends.review.waiting')} show={waitList.length > 0} friends={waitList} />
-                <FriendList title={t('friends.review.rejected')} show={refusedList.length > 0} friends={refusedList} />
                 <FriendList title={t('friends.my_apply')} show={profile?.permission !== true && apply !== undefined} friends={apply ? [apply] : []} />
                 {(profile?.permission || config.getBoolean("friend_apply_enable")) &&
                     <div className="wauto t-primary flex text-start text-2xl font-bold mt-8">
@@ -212,6 +208,23 @@ function Friend({ friend }: { friend: FriendItem }) {
         })
     }, [avatar, name, desc, url, status, sortOrder])
 
+    const applyAccepted = useCallback((accepted: number) => {
+        client.friend.update(friend.id, {
+            avatar: friend.avatar,
+            name: friend.name,
+            desc: friend.desc || '',
+            url: friend.url,
+            accepted,
+            sort_order: friend.sort_order || 0
+        }).then(({ error }) => {
+            if (error) {
+                showAlert(error.value as string)
+            } else {
+                window.location.reload()
+            }
+        })
+    }, [friend])
+
     const statusOption = [
         { value: -1, label: t('friends.review.rejected') },
         { value: 0, label: t('friends.review.waiting') },
@@ -226,6 +239,12 @@ function Friend({ friend }: { friend: FriendItem }) {
                 <p className="text-base text-center">{friend.name}</p>
                 {friend.health.length == 0 && <p className="text-sm text-neutral-500 text-center">{friend.desc}</p>}
                 {friend.accepted !== 1 && <p className={`${friend.accepted === 0 ? "t-primary" : "text-theme"}`}>{statusOption[friend.accepted + 1].label}</p>}
+                {profile?.permission && friend.accepted === 0 && (
+                    <div className="mt-3 flex w-full flex-row justify-center gap-2" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                        <button type="button" className="rounded-full bg-theme px-3 py-1 text-sm text-white" onClick={() => applyAccepted(1)}>{t('friends.review.accepted')}</button>
+                        <button type="button" className="rounded-full bg-secondary bg-button px-3 py-1 text-sm t-primary" onClick={() => applyAccepted(-1)}>{t('friends.review.rejected')}</button>
+                    </div>
+                )}
                 {friend.health.length > 0 && <p className="text-sm text-gray-500 text-center">{errorHumanize(friend.health)}</p>}
                 {(profile?.permission || profile?.id === friend.uid) && <>
                     <button onClick={(e) => { e.preventDefault(); setIsOpen(true) }} className="absolute top-0 right-0 m-2 px-2 py-1 bg-secondary t-primary rounded-full bg-button">

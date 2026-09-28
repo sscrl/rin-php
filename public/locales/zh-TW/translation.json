@@ -150,8 +150,8 @@
     "left": "暫時離開",
     "my_apply": "我的申請",
     "review": {
-      "accepted": "接受",
-      "rejected": "拒絕",
+      "accepted": "通過",
+      "rejected": "封鎖",
       "waiting": "待審核"
     },
     "title": "朋友們",
@@ -336,7 +336,17 @@
           "title": "友情連結健康監測 User-Agent"
         }
       },
-      "title": "友情連結設定"
+      "title": "友情連結設定",
+      "pending": {
+        "title": "待審核",
+        "desc": "通過後會在前台友情連結頁顯示。",
+        "empty": "暫無待審核申請"
+      },
+      "blocked": {
+        "title": "已封鎖",
+        "desc": "已封鎖的友情連結僅在後台可見，前台不會顯示。",
+        "empty": "暫無已封鎖友情連結"
+      }
     },
     "ai_summary": {
       "title": "AI 總結設定",

@@ -20,6 +20,7 @@ import { FEED_LAYOUT_OPTIONS, normalizeFeedLayout } from "../components/feed-lay
 import { useSiteConfig } from "../hooks/useSiteConfig";
 import { applyThemeColor, normalizeThemeColor } from "../utils/theme-color";
 import { AISummarySettings } from "./settings-ai";
+import { FriendModerationSettings } from "./settings-friends";
 import { ItemButton, ItemImageInput, ItemInput, ItemSwitch, ItemTitle, ItemWithUpload } from "./settings-items";
 import {
   areSettingsDraftsEqual,
@@ -611,6 +612,7 @@ export function Settings() {
               setConfigValue("server", "friend_ua", value);
             }}
           />
+          <FriendModerationSettings />
 
           <ItemTitle title={t("settings.maintenance.title")} />
           <ItemSwitch

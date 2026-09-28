@@ -150,8 +150,8 @@
     "left": "Left temporarily",
     "my_apply": "My Applications",
     "review": {
-      "accepted": "Accepted",
-      "rejected": "Rejected",
+      "accepted": "Approved",
+      "rejected": "Blocked",
       "waiting": "Pending review"
     },
     "title": "Friends",
@@ -336,7 +336,17 @@
           "title": "Friend Link Health Monitoring User-Agent"
         }
       },
-      "title": "Friend Link Settings"
+      "title": "Friend Link Settings",
+      "pending": {
+        "title": "Pending review",
+        "desc": "Approved links appear on the public friends page.",
+        "empty": "No pending applications"
+      },
+      "blocked": {
+        "title": "Blocked",
+        "desc": "Blocked links are only visible here and will not appear on the public page.",
+        "empty": "No blocked links"
+      }
     },
     "ai_summary": {
       "title": "AI Summary Settings",
