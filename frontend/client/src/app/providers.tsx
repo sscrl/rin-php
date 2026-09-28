@@ -14,11 +14,12 @@ export function AppProviders({
   config: ConfigWrapper;
   profile: Profile | undefined | null;
 }) {
+  const favicon = String(config.get<string>("site.logo") || config.get<string>("site.avatar") || "/favicon.ico").split("#")[0];
   return (
     <ClientConfigContext.Provider value={config}>
       <ProfileContext.Provider value={profile}>
         <Helmet>
-          <link rel="icon" href="/favicon.ico" />
+          <link rel="icon" href={favicon} />
         </Helmet>
         {children}
       </ProfileContext.Provider>

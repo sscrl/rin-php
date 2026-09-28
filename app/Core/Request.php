@@ -50,9 +50,16 @@ final class Request
             }
         }
 
+        $forwarded = strtolower((string) ($headers['x-forwarded-proto'] ?? ''));
+        if (str_contains($forwarded, ',')) {
+            $forwarded = trim(explode(',', $forwarded, 2)[0]);
+        }
+        $cfVisitor = strtolower((string) ($headers['cf-visitor'] ?? ''));
         $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
             || (($_SERVER['SERVER_PORT'] ?? null) === '443')
-            || (($headers['x-forwarded-proto'] ?? '') === 'https');
+            || $forwarded === 'https'
+            || str_contains($cfVisitor, '"scheme":"https"')
+            || (($headers['x-forwarded-ssl'] ?? '') === 'on');
         $scheme = $https ? 'https' : 'http';
         $host = $headers['x-forwarded-host'] ?? ($_SERVER['HTTP_HOST'] ?? 'localhost');
         $origin = $headers['origin'] ?? ($scheme . '://' . $host);

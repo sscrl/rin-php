@@ -129,11 +129,18 @@ final class App
     {
         $html = (string) file_get_contents($index);
         $version = $this->clientConfigVersion();
-        return str_replace(
+        $html = str_replace(
             'src="/api/config/client/bootstrap.js"',
             'src="/api/config/client/bootstrap.js?v=' . $version . '"',
             $html
         );
+        $favicon = '/favicon.ico?v=' . $version;
+        if (str_contains($html, 'rel="icon"') || str_contains($html, "rel='icon'")) {
+            $html = preg_replace('#<link[^>]*rel=["\']icon["\'][^>]*>#i', '<link rel="icon" href="' . $favicon . '" />', $html, 1) ?? $html;
+        } else {
+            $html = str_replace('</head>', '<link rel="icon" href="' . $favicon . '" />' . "\n  </head>", $html);
+        }
+        return $html;
     }
 
     private function clientConfigVersion(): string

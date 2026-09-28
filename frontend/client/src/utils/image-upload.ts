@@ -272,8 +272,9 @@ export async function uploadImageFile(file: File): Promise<UploadedImageResult> 
     throw new Error("Invalid upload response");
   }
 
+  const metadata = metadataResult.status === "fulfilled" ? metadataResult.value : {};
   return {
-    url,
-    ...(metadataResult.status === "fulfilled" ? metadataResult.value : {}),
+    url: attachImageMetadataToUrl(url, metadata),
+    ...metadata,
   };
 }

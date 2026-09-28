@@ -6,6 +6,7 @@ namespace Rin\Controllers;
 use Rin\Core\Context;
 use Rin\Core\HttpException;
 use Rin\Core\Response;
+use Rin\Support\Images;
 
 final class StorageController
 {
@@ -23,7 +24,8 @@ final class StorageController
         $hashkey = $hash . '.' . $suffix;
         $storage = app_storage();
         $storageKey = $storage->put($hashkey, $binary);
-        return Response::json(['url' => $storage->publicUrl($storageKey, $ctx->request->baseUrl())]);
+        $url = $storage->publicUrl($storageKey, $ctx->request->baseUrl());
+        return Response::json(['url' => Images::enrichPublicImageUrl($url) ?? $url]);
     }
 
     public static function blob(Context $ctx, array $params): Response

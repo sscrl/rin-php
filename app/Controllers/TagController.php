@@ -8,6 +8,7 @@ use Rin\Core\HttpException;
 use Rin\Core\Response;
 use Rin\Support\Dates;
 use Rin\Support\Helpers;
+use Rin\Support\Images;
 
 final class TagController
 {
@@ -49,7 +50,7 @@ final class TagController
         $feeds = [];
         foreach ($rows as $row) {
             $item = Helpers::mapFeedListItem($ctx->db, $row, false, Helpers::siteAvatar($ctx));
-            $item['content'] = $row['content'];
+            $item['content'] = Images::enrichContentImages((string) $row['content']);
             $feeds[] = $item;
         }
         return Response::json([

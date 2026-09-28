@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import ReactLoading from "react-loading";
 import {
   DEFAULT_IMAGE_MAX_FILE_SIZE,
+  attachImageMetadataToUrl,
   isImageFile,
   uploadImageFile,
 } from "../utils/image-upload";
@@ -53,7 +54,11 @@ export function ImageUploadInput({
     setUploading(true);
     try {
       const result = await uploadImageFile(file);
-      onChange(result.url);
+      onChange(attachImageMetadataToUrl(result.url, {
+        blurhash: result.blurhash,
+        width: result.width,
+        height: result.height,
+      }));
     } catch (error) {
       showError(error instanceof Error ? error.message : t("upload.failed"));
     } finally {

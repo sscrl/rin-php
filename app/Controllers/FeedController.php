@@ -21,11 +21,15 @@ final class FeedController
         $page = max((int) ($ctx->request->query('page') ?: 1), 1) - 1;
         $limit = (int) ($ctx->request->query('limit') ?: 20);
         $limit = $limit > 50 ? 50 : ($limit > 0 ? $limit : 20);
-        $cacheKey = "feeds_{$type}_{$page}_{$limit}";
+        $cacheKey = "feeds_img1_{$type}_{$page}_{$limit}";
         if ($type === null || $type === 'normal' || $type === '') {
             $cached = $ctx->cache->get($cacheKey);
             if (is_array($cached)) {
-                return Response::json($cached);
+                return Response::json($cached, 200, [
+                    'Cache-Control' => 'private, no-store, max-age=0',
+                    'CDN-Cache-Control' => 'no-store',
+                    'Cloudflare-CDN-Cache-Control' => 'no-store',
+                ]);
             }
         }
         $where = 'f.draft = 0 AND f.listed = 1';
@@ -57,7 +61,11 @@ final class FeedController
         if ($type === null || $type === 'normal' || $type === '') {
             $ctx->cache->set($cacheKey, $data);
         }
-        return Response::json($data);
+        return Response::json($data, 200, [
+            'Cache-Control' => 'private, no-store, max-age=0',
+            'CDN-Cache-Control' => 'no-store',
+            'Cloudflare-CDN-Cache-Control' => 'no-store',
+        ]);
     }
 
     public static function timeline(Context $ctx): Response
@@ -158,7 +166,11 @@ final class FeedController
                 ['id' => $row['id'], 'ip' => $ip, 'c' => Dates::now()]
             );
         }
-        return Response::json(Helpers::mapFeedDetail($ctx->db, $row, $pv, $uv, Helpers::siteAvatar($ctx)));
+        return Response::json(Helpers::mapFeedDetail($ctx->db, $row, $pv, $uv, Helpers::siteAvatar($ctx)), 200, [
+            'Cache-Control' => 'private, no-store, max-age=0',
+            'CDN-Cache-Control' => 'no-store',
+            'Cloudflare-CDN-Cache-Control' => 'no-store',
+        ]);
     }
 
     public static function adjacent(Context $ctx, array $params): Response

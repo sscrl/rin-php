@@ -8,6 +8,7 @@ use Rin\Core\HttpException;
 use Rin\Core\Response;
 use Rin\Support\Favicon as FaviconHelper;
 use Rin\Support\Helpers;
+use Rin\Support\Images;
 
 final class FaviconController
 {
@@ -43,6 +44,37 @@ final class FaviconController
             'Cache-Control' => 'public, max-age=3600',
         ]);
     }
+    private static function cacheHeaders(): array
+    {
+        return [
+            'Cache-Control' => 'public, max-age=0, must-revalidate',
+            'CDN-Cache-Control' => 'no-store',
+            'Cloudflare-CDN-Cache-Control' => 'no-store',
+        ];
+    }
+
+    private static function bytesFromImageUrl(string $url): ?Response
+    {
+        $url = trim($url);
+        if ($url === '') {
+            return null;
+        }
+        $object = Images::storageObjectFromUrl($url);
+        if ($object) {
+            try {
+                $webp = FaviconHelper::resizeToWebp($object['body']);
+                return Response::bytes($webp, 'image/webp', 200, self::cacheHeaders());
+            } catch (\Throwable) {
+                return Response::bytes($object['body'], $object['mime'], 200, self::cacheHeaders());
+            }
+        }
+        $clean = explode('#', $url, 2)[0];
+        if (preg_match('#^(https?:)?//#i', $clean) || str_starts_with($clean, '/')) {
+            return Response::redirect($clean, 302);
+        }
+        return null;
+    }
+
     public static function show(Context $ctx): Response
     {
         $storage = app_storage();
@@ -60,18 +92,20 @@ final class FaviconController
                 }
             }
         }
-        if (!$object) {
-            $fallback = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . 'favicon.png';
-            if (is_file($fallback)) {
-                return Response::bytes((string) file_get_contents($fallback), 'image/png', 200, [
-                    'Cache-Control' => 'public, max-age=31536000',
-                ]);
-            }
-            throw HttpException::text('Not found', 404);
+        if ($object) {
+            return Response::bytes($object['body'], 'image/webp', 200, self::cacheHeaders());
         }
-        return Response::bytes($object['body'], 'image/webp', 200, [
-            'Cache-Control' => 'public, max-age=31536000',
-        ]);
+        foreach ([Helpers::siteLogo($ctx), Helpers::siteAvatar($ctx)] as $fallbackUrl) {
+            $response = self::bytesFromImageUrl((string) $fallbackUrl);
+            if ($response) {
+                return $response;
+            }
+        }
+        $fallback = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . 'favicon.png';
+        if (is_file($fallback)) {
+            return Response::bytes((string) file_get_contents($fallback), 'image/png', 200, self::cacheHeaders());
+        }
+        throw HttpException::text('Not found', 404);
     }
 
     public static function original(Context $ctx): Response

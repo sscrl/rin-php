@@ -57,10 +57,31 @@ final class Helpers
 
     public static function summary(string $summary, string $content, int $len = 100): string
     {
-        if ($summary !== '') {
-            return $summary;
+        $text = Images::stripMediaMarkup($summary !== '' ? $summary : $content);
+        if ($text === '') {
+            $text = Images::stripMediaMarkup($content);
         }
-        return mb_strlen($content) > $len ? mb_substr($content, 0, $len) : $content;
+        if ($text === '') {
+            return '';
+        }
+        return mb_strlen($text) > $len ? mb_substr($text, 0, $len) : $text;
+    }
+
+    public static function publicImage(?string $url): ?string
+    {
+        if ($url === null) {
+            return null;
+        }
+        $url = trim($url);
+        if ($url === '') {
+            return null;
+        }
+        return Images::enrichPublicImageUrl($url) ?? $url;
+    }
+
+    public static function siteLogo(Context $ctx): string
+    {
+        return trim((string) ($ctx->clientConfig->getOrDefault('site.logo', '') ?: ''));
     }
 
     public static function siteAvatar(Context $ctx): string
@@ -132,10 +153,10 @@ final class Helpers
             'user' => [
                 'id' => (int) $row['user_id'],
                 'username' => $row['user_name'],
-                'avatar' => self::resolveUserAvatar($row['user_avatar'] ?? '', $siteAvatar),
+                'avatar' => self::publicImage(self::resolveUserAvatar($row['user_avatar'] ?? '', $siteAvatar)),
             ],
-            'avatar' => self::resolveFeedCover($row),
-            'cover' => trim((string) ($row['cover'] ?? '')) ?: null,
+            'avatar' => self::publicImage(self::resolveFeedCover($row)),
+            'cover' => self::publicImage(trim((string) ($row['cover'] ?? '')) ?: null),
             'createdAt' => Dates::iso($row['created_at']),
             'updatedAt' => Dates::iso($row['updated_at']),
             'uid' => (int) $row['uid'],
@@ -157,9 +178,9 @@ final class Helpers
             'id' => (int) $row['id'],
             'alias' => $row['alias'],
             'title' => $row['title'],
-            'summary' => $row['summary'],
-            'content' => $row['content'],
-            'cover' => trim((string) ($row['cover'] ?? '')) ?: null,
+            'summary' => self::summary((string) $row['summary'], (string) $row['content']),
+            'content' => Images::enrichContentImages((string) $row['content']),
+            'cover' => self::publicImage(trim((string) ($row['cover'] ?? '')) ?: null),
             'listed' => (int) $row['listed'],
             'draft' => (int) $row['draft'],
             'top' => (int) $row['top'],
@@ -173,7 +194,7 @@ final class Helpers
             'user' => [
                 'id' => (int) $row['user_id'],
                 'username' => $row['user_name'],
-                'avatar' => self::resolveUserAvatar($row['user_avatar'] ?? '', $siteAvatar),
+                'avatar' => self::publicImage(self::resolveUserAvatar($row['user_avatar'] ?? '', $siteAvatar)),
             ],
             'pv' => $pv,
             'uv' => $uv,
@@ -298,6 +319,11 @@ final class Helpers
             $result['site.page_size'] = $ctx->env['page_size'] ?? 5;
         }
         $result['ai_summary.enabled'] = self::aiConfig($ctx->serverConfig)['enabled'];
+        foreach (['site.logo', 'site.avatar'] as $imageKey) {
+            if (!empty($result[$imageKey]) && is_string($result[$imageKey])) {
+                $result[$imageKey] = self::publicImage($result[$imageKey]) ?? $result[$imageKey];
+            }
+        }
         return $result;
     }
 

@@ -14,6 +14,7 @@ function FeedCardImage({ src, variant }: { src: string; variant: FeedCardVariant
     const { src: cleanSrc, blurhash, width, height } = parseImageUrlMetadata(src);
     const { failed, imageRef, loaded, onError, onLoad } = useImageLoadState(cleanSrc);
     const aspectRatio = width && height ? `${width} / ${height}` : undefined;
+    const hasRatio = Boolean(aspectRatio);
     const imageFrameClass =
         variant === "editorial"
             ? "relative flex max-h-80 w-full flex-row items-center overflow-hidden rounded-[20px]"
@@ -50,7 +51,7 @@ function FeedCardImage({ src, variant }: { src: string; variant: FeedCardVariant
                 height={height}
                 onLoad={onLoad}
                 onError={onError}
-                className={`absolute inset-0 h-full w-full object-cover object-center hover:scale-105 translation duration-300 ${blurhash && (!loaded || failed) ? "opacity-0" : "opacity-100"
+                className={`${hasRatio ? "absolute inset-0 h-full w-full" : "relative h-auto max-h-80 w-full"} object-cover object-center hover:scale-105 translation duration-300 ${blurhash && (!loaded || failed) ? "opacity-0" : "opacity-100"
                     }`}
             />
         </div>
