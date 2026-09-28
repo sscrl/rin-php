@@ -67,6 +67,15 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\serve.ps1
 
 站点名称、主题色、评论开关、友链申请、AI 摘要等其余选项与原版一样，在后台「设置」中修改。
 
+界面语言支持 English、简体中文、繁體中文、日本語，可在站点右上角切换。
+
+## 友链
+
+- 后台可开启「友链申请」。访客无需登录即可提交，提交后进入待审核。
+- 管理员在后台「设置 → 友链设置」可对待审核申请通过或屏蔽。
+- 已通过的友链显示在前台友链页；已屏蔽的只在后台可见，不会出现在前台。
+- 待审核、已屏蔽列表为空时不显示空区块。
+
 ## 部署
 
 网站根目录指向 `public/`。
@@ -177,3 +186,5 @@ config.example.php   配置模板
 - 登录页只显示账号密码，不再显示 GitHub 按钮
 - AI 摘要改为请求时同步生成（不再依赖 Cloudflare Queue / Workers AI）
 - RSS 在访问 `/rss.xml`、`/atom.xml`、`/rss.json` 时即时生成
+- 仓库只保留可部署源码和已构建前端。不要提交 `tmp_*` 临时脚本、`config.php`、数据库和上传文件
+- 若要修改前端，在 `frontend/` 目录执行 `npm run build`，产物输出到 `public/`。运行站点不需要 Node.js

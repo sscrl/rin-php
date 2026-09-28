@@ -20,3 +20,15 @@ frontend/.vite
 Rin-0.3.0/
 *.zip
 storage/installed.lock
+
+tmp_*
+tmp-*
+__pycache__/
+install-ui-*.png
+install-ui-*.html
+tools/_*.py
+tools/_*.txt
+tools/_*.log
+tools/_*.err
+tools/_*.json
+tools/live_*
